@@ -28,11 +28,11 @@ class FluxLitAPI(ls.LitAPI):
         # Load CLIP components
         text_encoder = CLIPTextModel.from_pretrained(
             "openai/clip-vit-large-patch14", 
-            torch_dtype=torch.bfloat16,
-            device_map="auto"
+            torch_dtype=torch.bfloat16
         )
         tokenizer = CLIPTokenizer.from_pretrained(
-            "openai/clip-vit-large-patch14"
+            "openai/clip-vit-large-patch14", 
+            torch_dtype=torch.bfloat16
         )
         print("CLIP components loaded")
         
@@ -40,13 +40,12 @@ class FluxLitAPI(ls.LitAPI):
         text_encoder_2 = T5EncoderModel.from_pretrained(
             "black-forest-labs/FLUX.1-schnell", 
             subfolder="text_encoder_2", 
-            torch_dtype=torch.bfloat16,
-            device_map="auto",
+            torch_dtype=torch.bfloat16, 
             revision="refs/pr/1"
         )
         tokenizer_2 = T5TokenizerFast.from_pretrained(
             "black-forest-labs/FLUX.1-schnell", 
-            subfolder="tokenizer_2",
+            subfolder="tokenizer_2", 
             revision="refs/pr/1"
         )
         print("T5 components loaded")
@@ -55,8 +54,7 @@ class FluxLitAPI(ls.LitAPI):
         vae = AutoencoderKL.from_pretrained(
             "black-forest-labs/FLUX.1-schnell", 
             subfolder="vae", 
-            torch_dtype=torch.bfloat16,
-            device_map="auto",
+            torch_dtype=torch.bfloat16, 
             revision="refs/pr/1"
         )
         print("VAE loaded")
@@ -65,8 +63,7 @@ class FluxLitAPI(ls.LitAPI):
         transformer = FluxTransformer2DModel.from_pretrained(
             "black-forest-labs/FLUX.1-schnell", 
             subfolder="transformer", 
-            torch_dtype=torch.bfloat16,
-            device_map="auto",
+            torch_dtype=torch.bfloat16, 
             revision="refs/pr/1"
         )
         print("Transformer loaded")
@@ -96,10 +93,12 @@ class FluxLitAPI(ls.LitAPI):
         print("Model setup complete")
 
     def decode_request(self, request):
-        return request["prompt"]
+        print(f"Received prompt request")
+        prompt = request["prompt"]
+        return prompt
 
     def predict(self, prompt):
-        # Use automatic mixed precision for inference
+        print(f"Generating image for prompt: {prompt}")
         with torch.cuda.amp.autocast():
             image = self.pipe(
                 prompt=prompt, 
@@ -109,25 +108,24 @@ class FluxLitAPI(ls.LitAPI):
                 generator=torch.Generator().manual_seed(int(time.time())),
                 guidance_scale=3.5,
             ).images[0]
+        print("Image generation complete")
         return image
 
     def encode_response(self, image):
         # Save a copy to the outputs directory with timestamp
         timestamp = time.strftime("%Y%m%d-%H%M%S")
         image.save(f"outputs/generated_{timestamp}.png")
+        print(f"Image saved as generated_{timestamp}.png")
         
         # Return the image in response
         buffered = BytesIO()
         image.save(buffered, format="PNG")
         return Response(content=buffered.getvalue(), headers={"Content-Type": "image/png"})
 
+# Starting the server
 if __name__ == "__main__":
+    print("Starting Flux API server...")
     api = FluxLitAPI()
-    server = ls.LitServer(
-        api, 
-        timeout=False,
-        accelerator="cuda",
-        max_batch_size=2,  # Optimized for 12GB VRAM
-        num_workers=2      # Adjust based on your CPU
-    )
+    server = ls.LitServer(api, timeout=False)
+    print("Server initialized, starting on port 8000...")
     server.run(port=8000)
