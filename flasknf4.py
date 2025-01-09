@@ -8,6 +8,7 @@ from diffusers import FlowMatchEulerDiscreteScheduler, AutoencoderKL
 from diffusers.models.transformers.transformer_flux import FluxTransformer2DModel
 from diffusers.pipelines.flux.pipeline_flux import FluxPipeline
 from safetensors.torch import load_file
+from transformers import BitsAndBytesConfig
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -16,10 +17,15 @@ app = Flask(__name__)
 def load_pipeline():
     # clear cache
     torch.cuda.empty_cache()
-    
+
     dtype = torch.float16
     bfl_repo = "black-forest-labs/FLUX.1-dev"
     weights_path = "./flux1-dev-bnb-nf4-v2.safetensors"  # Update this path
+
+    quantization_config = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_compute_dtype=torch.float16
+    )
     
     # Load components
     scheduler = FlowMatchEulerDiscreteScheduler.from_pretrained(bfl_repo, subfolder="scheduler")
@@ -29,7 +35,7 @@ def load_pipeline():
     text_encoder = CLIPTextModel.from_pretrained(
         "openai/clip-vit-large-patch14",
         torch_dtype=dtype,
-        load_in_4bit=True,
+        quantization_config=quantization_config,
         device_map="auto"
     )
     
@@ -37,7 +43,7 @@ def load_pipeline():
         bfl_repo,
         subfolder="text_encoder_2",
         torch_dtype=dtype,
-        load_in_4bit=True,
+        quantization_config=quantization_config,
         device_map="auto"
     )
     
