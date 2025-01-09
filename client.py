@@ -51,7 +51,6 @@ if __name__ == "__main__":
     parser.add_argument("--height", type=int, default=1024, help="Image height (max 2048)")
     parser.add_argument("--guidance_scale", type=float, default=5.0, help="Guidance scale for generation")
     parser.add_argument("--steps", type=int, default=28, help="Number of inference steps")
-    parser.add_argument("--max_sequence_length", type=int, default=512, help="Maximum sequence length for text")
     
     args = parser.parse_args()
     
@@ -60,6 +59,5 @@ if __name__ == "__main__":
         args.width,
         args.height,
         args.guidance_scale,
-        args.steps,
-        args.max_sequence_length
+        args.steps
     )
