@@ -109,6 +109,9 @@ def generate_image():
     
     except Exception as e:
         return f"An error occurred: {str(e)}", 500
+    finally:
+        # clear cache
+        torch.cuda.empty_cache()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8345, debug=False)
