@@ -14,6 +14,9 @@ app = Flask(__name__)
 
 # Load the model
 def load_pipeline():
+    # clear cache
+    torch.cuda.empty_cache()
+    
     dtype = torch.float16
     bfl_repo = "black-forest-labs/FLUX.1-dev"
     weights_path = "./flux1-dev-bnb-nf4-v2.safetensors"  # Update this path
