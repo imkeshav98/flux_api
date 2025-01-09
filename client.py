@@ -6,10 +6,10 @@ import time
 
 def generate_image(
     prompt, 
-    width=1024, 
-    height=1024, 
+    width=512, 
+    height=512, 
     guidance_scale=5.0, 
-    num_inference_steps=28
+    num_inference_steps=4
 ):
     print(f"Generating image for prompt: {prompt}")
     start_time = time.time()
