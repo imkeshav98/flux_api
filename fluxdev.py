@@ -6,6 +6,8 @@ import numpy as np
 from io import BytesIO
 import litserve as ls
 import os
+import signal
+import sys  # Added for graceful shutdown
 from fastapi import Response
 from optimum.quanto import freeze, qfloat8, quantize
 from diffusers import FlowMatchEulerDiscreteScheduler, AutoencoderKL
@@ -77,8 +79,31 @@ class FluxLitAPI(ls.LitAPI):
         image.save(buffered, format="PNG")
         return Response(content=buffered.getvalue(), headers={"Content-Type": "image/png"})
 
+def cleanup_resources():
+    """Clean up GPU memory"""
+    torch.cuda.empty_cache()
+
+def signal_handler(sig, frame):
+    """Handle shutdown signals gracefully"""
+    print("\nReceived shutdown signal, cleaning up...")
+    cleanup_resources()
+    sys.exit(0)
+
 if __name__ == "__main__":
+    # Register signal handlers
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+    
     print("Starting Flux API server...")
     api = FluxLitAPI()
     server = ls.LitServer(api, timeout=False)
-    server.run(port=8000)
+    
+    try:
+        server.run(port=8000)
+    except KeyboardInterrupt:
+        print("\nShutdown requested...")
+    except Exception as e:
+        print(f"Server error: {str(e)}")
+    finally:
+        cleanup_resources()
+        print("Server shutdown complete")
